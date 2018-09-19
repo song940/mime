@@ -163,18 +163,33 @@ MIME.parse = function(content, contentType){
 
 /**
  * [parseAddress description]
+ * @docs https://tools.ietf.org/html/rfc2822#section-3.4
  * @param  {[type]} address [description]
  * @return {[type]}         [description]
  */
 MIME.parseAddress = function(address){
-  var host = (address.replace(/^(.+@)/g,'').replace(/>/,''));
-  var user = (address.match(/^(?:.+<)?(.+)@.+$/)[1]);
-  var name = (address.match(/^(.+)<.+>$/) || [])[1] || '';
+  const r1 = /(.+)@(.+)/;
+  const r2 = /^([^<]+)<(.+)@(.+)>$/;
+  if(typeof address !== 'string') 
+    throw new TypeError(`[MIME] address must be a string, but got ${address}`);
+  if(!r1.test(address))
+    throw new SyntaxError(`[MIME] address syntax error: ${address}`);
+  var _, name, user, host;
+  if(r2.test(address)){
+    // Liu song <hi@lsong.org>
+    [ _, name, user, host ] = address.match(r2);
+  }else{
+    // hi@lsong.org
+    [ _, user, host ] = address.match(r1);
+  }
+  host = host.trim();
+  user = user.trim();
+  name = name && name.trim();
   return {
-    host    : host,
-    user    : user,
-    name    : name,
-    address : [ user, host ].join('@')
+    host,
+    user,
+    name,
+    address: `${user}@${host}`
   };
 };
 /**
@@ -242,7 +257,7 @@ MIME.parseBody = function(content, contentType){
     contentType = MIME.parseHeaderValue(contentType);
   }
   if(!contentType || contentType._ !== 'multipart/alternative'){
-    body._ = content;
+    body._ = content.trim();
     return body;
   }
   while(lines.length){
