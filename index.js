@@ -41,7 +41,7 @@ MIME.kv = function(key, value){
 };
 
 MIME.trim = function(s){
-  return s.replace(/^"|"$/, '');
+  return s.trim().replace(/^"|"$/, '');
 }
 
 MIME.filter = function(str){
@@ -75,7 +75,7 @@ var aliaes = {
   from: 'From',
   to  : 'To'  ,
   cc  : 'Cc'  ,
-  bcc : 'Bcc' ,
+  subject: 'Subject'
 };
 
 Object.keys(aliaes).forEach(function(alias){
@@ -83,8 +83,8 @@ Object.keys(aliaes).forEach(function(alias){
     return this.headers[ aliaes[alias] ];
   });
 
-  MIME.prototype.__defineSetter__(alias, function(from){
-    this.headers[ aliaes[alias] ] = from;
+  MIME.prototype.__defineSetter__(alias, function(value){
+    this.headers[ aliaes[alias] ] = value.toString();
   });
 });
 
@@ -203,10 +203,8 @@ MIME.parseHeaders = function(header){
   .split(MIME.CRLF)
   .filter(MIME.filter)
   .map(MIME.parseHeader)
-  .reduce(function(item, cur){
-    for(var k in cur) item[k] = cur[k];
-    return item;
-  }, {});
+  .reduce((item, cur) => 
+    Object.assign(item, cur), {});
 };
 
 /**
