@@ -41,7 +41,7 @@ MIME.kv = function(key, value){
 };
 
 MIME.trim = function(s){
-  return s.trim().replace(/^"|"$/, '');
+  return s.replace(/^"|"$/, '');
 }
 
 MIME.filter = function(str){
@@ -73,9 +73,9 @@ MIME.lookup = function(filename){
 
 var aliaes = {
   from: 'From',
-  to  : 'To'  ,
-  cc  : 'Cc'  ,
-  subject: 'Subject'
+  to  : 'To',
+  cc  : 'Cc',
+  subject : 'Subject',
 };
 
 Object.keys(aliaes).forEach(function(alias){
@@ -108,11 +108,14 @@ MIME.prototype.header = function(name, value){
  */
 MIME.prototype.write = function(buf){
   this.buffer += buf;
+  this.buffer = this.buffer
+    .replace(/\r\n/g, '\n')
+    .replace(/\n/g, '\r\n');
   var LINE = MIME.CRLF + MIME.CRLF;
   var sp = this.buffer.indexOf(LINE);
   if(sp > -1){
-    var str = this.buffer.substr(0, sp);
-    this.headers = MIME.parseHeaders(str);
+    var header = this.buffer.substr(0, sp);
+    this.headers = MIME.parseHeaders(header);
     this.emit('headers', this.headers);
     this.buffer = this.buffer.substr(sp);
   }
@@ -157,7 +160,7 @@ MIME.parse = function(content, contentType){
   if(typeof contentType === 'undefined'){
     return mime.end(content);
   }else{
-    return mime.parseBody(content, contentType);
+    return MIME.parseBody(content, contentType);
   }
 };
 
@@ -184,12 +187,15 @@ MIME.parseAddress = function(address){
   }
   host = host.trim();
   user = user.trim();
-  name = name && name.trim();
+  name = (name || '').trim();
   return {
     host,
     user,
     name,
-    address: `${user}@${host}`
+    address: `${user}@${host}`,
+    toString(){
+      return `${name}<${this.address}>`;
+    }
   };
 };
 /**
@@ -203,8 +209,10 @@ MIME.parseHeaders = function(header){
   .split(MIME.CRLF)
   .filter(MIME.filter)
   .map(MIME.parseHeader)
-  .reduce((item, cur) => 
-    Object.assign(item, cur), {});
+  .reduce(function(item, cur){
+    for(var k in cur) item[k] = cur[k];
+    return item;
+  }, {});
 };
 
 /**
@@ -248,16 +256,14 @@ MIME.parseHeaderValue = function(str){
  * @return {[type]}     [description]
  */
 MIME.parseBody = function(content, contentType){
-  var j=-1, h='', body = { _: '' };
-  var status = MIME.PARSE_STATUS.BODY;
-  var lines = (content || '').toString().split(MIME.CRLF);
+  if(typeof content !== 'string')
+    content = content.toString();
   if(typeof contentType === 'string'){
     contentType = MIME.parseHeaderValue(contentType);
   }
-  if(!contentType || contentType._ !== 'multipart/alternative'){
-    body._ = content.trim();
-    return body;
-  }
+  var j=-1, h='', body = { _: '' };
+  var status = MIME.PARSE_STATUS.BODY;
+  var lines = content.split(MIME.CRLF);
   while(lines.length){
     line = lines.shift();
     if(line == '--$--'.replace('$', contentType.boundary)){
@@ -290,8 +296,8 @@ MIME.parseBody = function(content, contentType){
   Object.keys(parts).forEach(n => {
     const part = parts[n];
     const { headers, body } = part;
-    const { _: type } = headers['Content-Type'];
-    const { _: encoding } = headers['Content-Transfer-Encoding'];
+    const { _: type } = headers['Content-Type'] || {};
+    const { _: encoding } = headers['Content-Transfer-Encoding'] || {};
     part.raw = body;
     part.body = Buffer.from(body, encoding);
     switch(type){
