@@ -1,39 +1,31 @@
-const fs 	  = require('fs');
+const fs = require('fs');
 const Message = require('..');
 
-// const message = new Message();
+const message = new Message();
 
-// message.from = 'hi@lsong.org';
-
-// message.on('headers', function(headers){
-//   console.log(headers);
-// });
-
-// message.on('body', function(msg){
-//   console.log(msg);
-// });
-
-// message.on('end', function(msg){
-//   console.log(msg);
-// });
-
-
-var message = new Message({
-  // from : 'test@lsong.org',
-  // to   : [ 'Liu song <hi@lsong.org>', 'hello@lsong.org' ],
-  // cc   : 'cc@lsong.org',
-  // subject: 'Hello world',
-});
-
-message.on('headers', headers => {
-  console.log(headers);
-});
-
-message.on('body', body => {
+message.on('end', (headers, body) => {
   console.log(body);
 });
 
-//
-fs.createReadStream('./docs/smtp-qq.txt').pipe(message);
-// const message = Message.parse(fs.readFileSync('./docs/smtp-qq.txt', 'utf8'));
+fs.createReadStream(__dirname + '/../docs/smtp-qq.txt').pipe(message);
 
+// const type = new Message.Header({
+//   name: 'content-type',
+//   value: 'text/html',
+//   options: { a: 1, b:2 }
+// });
+
+// const html = new Message([
+//   type,
+// ], '<h1>Hello text/html</h1>');
+
+// const message = new Message({
+//   From: 'mail@lsong.org',
+//   To: 'hi@lsong.org',
+//   Subject: 'hello world',
+//   type
+// }, [
+//   html, 'hello text/plain!'
+// ]);
+
+// console.log(message.toString());
